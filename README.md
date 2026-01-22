@@ -148,14 +148,14 @@ SHOULDER set to 90.0°
 - Design 3D-printed base to house electronics (Arduino, PCA9685, power distribution)
 - Add weight distribution to counteract tipping when arm extends to maximum reach
 
-###End-Effector and Wrist Joint
+### End-Effector and Wrist Joint
 - Add gripper mechanism to transform from positioning system to true manipulator
 - Integrate wrist rotation joint (more challenging)
 - Would require upgrading to 4-DOF kinematics
 - Significantly more complex IK mathematics
 - Trade-off between added capability and system complexity makes this longer-term goal
 
-###Graphical User Interface
+### Graphical User Interface
 - Current serial command-line works well for testing/debugging
 - Python-based GUI would be more accessible and intuitive
 - Make experimentation faster than typing coordinates manually
