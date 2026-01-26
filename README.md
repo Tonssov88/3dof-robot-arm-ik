@@ -1,18 +1,22 @@
 # 3-DOF Robot Arm with Inverse Kinematics
 
-A 2D planar robot arm controlled via inverse kinematics, featuring smooth interpolated movements and dual control modes. Built with Arduino and custom geometric IK algorithms for precise end-effector positioning.
+A 3-degree-of-freedom robotic manipulator with real-time inverse kinematics, featuring smooth interpolated movements and an interactive 3D control dashboard. The system combines custom IK algorithms on Arduino with a visual C++/Raylib interface for intuitive control and monitoring.
 
 ![Robot Arm Demo](images/demo.gif)
 
 ## Overview
 
-This project implements a 3-degree-of-freedom robotic manipulator with custom inverse kinematics software. The system allows precise control of the end-effector position in 3D Cartesian space, with the IK engine automatically calculating required joint angles. Linear interpolation creates smooth, predictable motion along straight-line paths.
+This project implements a complete robot arm control system with two main components:
 
-**Key Achievement**: Successfully implemented geometric IK solution achieving ±2mm positioning accuracy across a 210mm workspace.
+1. **Arduino Firmware**: Real-time inverse kinematics engine that converts 3D coordinates to joint angles and controls servos with smooth interpolation
+2. **Desktop Dashboard**: Interactive 3D visualization built with Raylib that allows drag-and-drop positioning and real-time monitoring
+
+**Key Achievement**: Successfully implemented geometric IK solution achieving ±2mm positioning accuracy across a 210mm workspace with seamless PC-to-robot serial communication.
 
 ## Features
 
-- **Custom Inverse Kinematics Engine**: Geometric solution using law of cosines and triangle decomposition for 3-DOF manipulation
+### Arduino IK Engine
+- **Custom Inverse Kinematics**: Geometric solution using law of cosines and triangle decomposition for 3-DOF manipulation
 - **Smooth Linear Interpolation**: Cartesian-space path planning with 20-step interpolation for fluid movement
 - **Dual Control Modes**: 
   - **IK Mode**: Position control via 3D coordinates (x, y, z)
@@ -21,9 +25,19 @@ This project implements a 3-degree-of-freedom robotic manipulator with custom in
   - Workspace boundary validation
   - Self-collision prevention via elbow angle constraints
   - Per-servo calibration for accurate positioning
-- **Real-time Serial Interface**: Interactive command-line control via USB
+- **Real-time Serial Interface**: Command-line control via USB at 115200 baud
 - **Memory-Optimized Code**: Runs on Arduino Uno/Nano with only 2KB RAM
 - **Non-blocking Architecture**: Timing-based servo updates maintain interface responsiveness during motion
+
+### Desktop Control Dashboard
+- **Interactive 3D Visualization**: Real-time rendering of robot arm configuration
+- **Drag-and-Drop Control**: Click and drag the end effector to position the arm
+- **Coordinate Input**: Precise positioning via numerical X/Y/Z input fields
+- **Live Status Display**: Current position feedback and serial connection status
+- **Camera Controls**: Orbit view with right-click for inspection from any angle
+- **Direct Hardware Communication**: Sends coordinates to physical arm via serial
+
+
 
 ## Hardware
 
@@ -44,23 +58,28 @@ This project implements a 3-degree-of-freedom robotic manipulator with custom in
 - **Base Rotation Range**: 0° to 180°
 - **Degrees of Freedom**: 3 (Base, Shoulder, Elbow)
 
-### Architecture Diagram
+### System Architecture
 ```
-┌─────────────┐
-│  Arduino    │
-│  Uno/Nano   │
-└──────┬──────┘
-       │ I²C (SDA/SCL)
-       │
-┌──────▼──────┐      External 5V/3A
-│   PCA9685   │◄─────────────────────
-│ Servo Driver│
-└──────┬──────┘
-       │ PWM Signals
-       │
-       ├──► Base Servo (Channel 0)
-       ├──► Shoulder Servo (Channel 1)
-       └──► Elbow Servo (Channel 2)
+┌──────────────────┐         Serial USB
+│   PC Dashboard   │◄──────────────────────┐
+│  (Raylib/C++)    │                       │
+└──────────────────┘                       │
+                                           │
+┌──────────────────┐      115200 baud     │
+│  Arduino Nano    │◄──────────────────────┘
+│  (IK Engine)     │
+└────────┬─────────┘
+         │ I²C (SDA/SCL)
+         │
+┌────────▼─────────┐      External 5V/3A
+│   PCA9685        │◄────────────────────
+│  Servo Driver    │
+└────────┬─────────┘
+         │ PWM Signals (50Hz)
+         │
+         ├──► Base Servo (Channel 0)
+         ├──► Shoulder Servo (Channel 1)
+         └──► Elbow Servo (Channel 2)
 ```
 
 
@@ -81,13 +100,34 @@ The inverse kinematics solution uses geometric decomposition to convert 3D Carte
 
 ### Motion Planning: Linear Interpolation
 
-Linear interpolation generates smooth motion by creating intermediate waypoints along a straight line between the start and end positions in 3D space. Rather than interpolating joint angles (which produces curved paths), the system calculates evenly-spaced (x,y,z) coordinates and solves inverse kinematics for each point. This approach ensures the end-effector follows smooth, predictable straight-line trajectories with approximately 1-second movement times.
+The system implements Cartesian-space interpolation for smooth, predictable motion:
 
-## Usage
+1. **Path Generation**: Creates N evenly-spaced waypoints along a straight line from current to target position
+2. **Real-time IK**: Solves inverse kinematics for each waypoint
+3. **Timed Execution**: Updates servos at 50 steps/second with configurable total movement time
+4. **Trajectory**: Produces straight-line motion in workspace 
 
-### Command Interface
 
-The robot is controlled via serial commands at 9600 baud.
+### Dashboard Control
+
+![Dashboard Interface](images/dashboard.png)
+
+**Controls:**
+- **Left Mouse Button**: Click and drag end effector sphere to position arm
+- **Right Mouse Button**: Orbit camera around arm
+- **Text Input**: Enter precise X/Y/Z coordinates and click "SEND TO ARM"
+- **HOME Button**: Return arm to safe 90° position
+
+
+### Serial Command Protocol
+
+Communication between PC and Arduino uses a simple text-based protocol:
+
+**From PC to Arduino:**
+```
+<x> <y> <z>\n        # IK coordinates in mm (e.g., "105.0 100.0 50.0\n")
+home\n               # Move to home position
+```
 
 #### IK Mode (Default)
 Specify end-effector position in millimeters:
@@ -115,7 +155,7 @@ home             # All servos to 90° (safe neutral position)
 help             # Display command reference
 ```
 
-### Example Session
+### Example Session 
 ```
 === Robot Arm IK Controller ===
 Type 'help' for commands
@@ -141,23 +181,15 @@ SHOULDER set to 90.0°
 
 ![Serial Interface](images/serial_demo.png)
 
-## Future Improvements
+## Learning Outcomes
 
-### Stabilized Base Platform
-- Current setup uses tape to secure arm to table (functional but inelegant)
-- Design 3D-printed base to house electronics (Arduino, PCA9685, power distribution)
-- Add weight distribution to counteract tipping when arm extends to maximum reach
+I learned a lot of hands-on experience with this project:
+- **Robotics Mathematics**: Forward/inverse kinematics, coordinate transformations
+- **Real-time Systems**: Non-blocking Arduino architecture, timing-critical servo updates
+- **Serial Communication**: Custom protocol design, error handling, PC-microcontroller interface
+- **3D Graphics**: OpenGL-based rendering with Raylib, camera controls, ray casting
+- **CAD/Manufacturing**: 3D printing tolerances, mechanical design constraints
+- **System Integration**: Hardware-software integration, debugging across platforms
 
-### End-Effector and Wrist Joint
-- Add gripper mechanism to transform from positioning system to true manipulator
-- Integrate wrist rotation joint (more challenging)
-- Would require upgrading to 4-DOF kinematics
-- Significantly more complex IK mathematics
-- Trade-off between added capability and system complexity makes this longer-term goal
-
-### Graphical User Interface
-- Current serial command-line works well for testing/debugging
-- Python-based GUI would be more accessible and intuitive
-- Make experimentation faster than typing coordinates manually
 
 
