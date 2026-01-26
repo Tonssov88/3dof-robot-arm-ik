@@ -23,7 +23,6 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
 #define ELBOW_MAX_ANGLE    150.0  // Maximum safe elbow angle (adjust this!)
 
 // Movement settings
-#define INTERPOLATION_STEPS 50    // Number of steps between positions
 #define STEP_DELAY_MS 20          // Delay between each step (ms)
 
 //arm geometry
@@ -47,6 +46,8 @@ float lastElbowDeg = -999;
 // Movement interpolation state
 bool isMoving = false;
 int currentStep = 0;
+
+int interpolationSteps = 50;
 
 struct armAngles {
   float baseAngle;
@@ -156,7 +157,7 @@ bool updateMovement() {
   
   currentStep++;
   
-  if (currentStep >= INTERPOLATION_STEPS) {
+  if (currentStep >= interpolationSteps) {
     // Movement complete
     currentCoords[0] = targetCoords[0];
     currentCoords[1] = targetCoords[1];
@@ -167,7 +168,7 @@ bool updateMovement() {
   }
   
   // Calculate interpolation factor (0.0 to 1.0)
-  float t = (float)currentStep / (float)INTERPOLATION_STEPS;
+  float t = (float)currentStep / (float)interpolationSteps;
   
   // Interpolate between current and target positions
   lerp3D(currentCoords, targetCoords, t, coords);
@@ -287,6 +288,16 @@ void parseCommand(String input) {
   else if (input == "help") {
     printHelp();
   }
+  else if (input.startsWith("steps ")) {
+    int steps = input.substring(6).toInt();
+    if (steps >= 1 && steps <= 100) {
+        interpolationSteps = steps;
+        Serial.print("Interpolation steps set to: ");
+        Serial.println(steps);
+    } else {
+        Serial.println("Error: Steps must be 1-100");
+    }
+}
   else {
     // Try parsing as coordinates if in IK mode
     if (!manualMode) {
@@ -312,6 +323,7 @@ void printHelp() {
   Serial.println();
   Serial.println("General:");
   Serial.println("  home           - Move all servos to 90°");
+  //Serial.println("  steps (int)    - Change interpolation steps when using IK");
   Serial.println("  help           - Show this help");
   Serial.print("\nElbow constrained to: ");
   Serial.print(ELBOW_MIN_ANGLE, 0);
@@ -319,7 +331,7 @@ void printHelp() {
   Serial.print(ELBOW_MAX_ANGLE, 0);
   Serial.println("°");
   Serial.print("Interpolation: ");
-  Serial.print(INTERPOLATION_STEPS);
+  Serial.print(interpolationSteps);
   Serial.print(" steps, ");
   Serial.print(STEP_DELAY_MS);
   Serial.println("ms per step");
@@ -327,7 +339,7 @@ void printHelp() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("=== Robot Arm IK Controller ===");
   Serial.println("Type 'help' for commands");
   Serial.print("Elbow angle constrained to: ");
@@ -363,7 +375,7 @@ void loop() {
         
         // Check if it starts with a command letter or is numeric (coordinates)
         if (input.startsWith("b ") || input.startsWith("s ") || input.startsWith("e ") || 
-            input.startsWith("a ") || input == "ik" || input == "manual" || 
+            input.startsWith("a ") ||input.startsWith("steps ")|| input == "ik" || input == "manual" || 
             input == "home" || input == "help") {
           parseCommand(input);
         } else {
