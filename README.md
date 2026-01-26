@@ -3,7 +3,7 @@
 A 3-degree-of-freedom robotic manipulator with real-time inverse kinematics, featuring smooth interpolated movements and an interactive 3D control dashboard. The system combines custom IK algorithms on Arduino with a visual C++/Raylib interface for intuitive control and monitoring.
 
 <p align="center">
-  <img src="images/demoV2.gif" alt="Demo GIF">
+  <img src="images/demoV2.gif" width = "600" alt="Demo GIF">
 </p>
 
 ## Overview
